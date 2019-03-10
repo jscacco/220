@@ -1,0 +1,152 @@
+%%% A graph is a structue composed of nodes, which may be connected by edges
+%%% Useful for describing relationships between things
+%%% Ex: friends on Facebook
+
+%%% (draw example on board)
+
+%%% Start with directed edges
+dirEdge(a,b). dirEdge(a,c).
+dirEdge(b,c). dirEdge(b,d). dirEdge(b,e).
+dirEdge(c,d).
+
+dirEdge(f,g). dirEdge(f,h).
+dirEdge(g,h).
+
+%%% Want to make directed edges go both ways
+% dirEdge(A,B) :- dirEdge(B,A).
+% Q: dirEdge(a, X).   % Infinite recursion!
+
+% No recursion, works great.
+edge(X,Y) :- dirEdge(X,Y).
+edge(X,Y) :- dirEdge(Y,X).
+
+% Q: edge(b, X).
+
+%%% A path is a series of nodes that are consecutively connected by edges
+%%% Works for directed graph...
+dirPath(X,X).
+dirPath(X,Y) :- dirEdge(X,Z), dirPath(Z,Y).
+
+%%% ...infinite loop for undirected graph. Can go between two nodes forever
+% pathBad(X,X).
+% pathBad(X,Y) :- edge(X,Z), pathBad(Z,Y).
+
+%%% We need to check and not visit any edge more than once in a path.
+%%% We still get an answer for every path between two nodes, but not multiples
+path(X,Y,[X|Path]) :- pathNoRepeats(X,Y,[X],Path).
+
+pathNoRepeats(X,X,_,[]).
+pathNoRepeats(X,Y,Checked, [Z|Path]) :- edge(X,Z),
+			      \+member(Z,Checked),
+			      pathNoRepeats(Z,Y,[Z|Checked], Path).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Working with the interpreter
+
+% ?- listing.  % Gives all of the axioms defined so far.
+% ?- trace.    % When running a query, allows you to see the resolution process
+               %  - Lots of useful tools, see with ?
+% ?- path(a,c).
+% ?- notrace.  % Turns tracing off
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% A graph is complete if every node in the graph is directly connected
+%%% to every other node
+complete([]).
+complete([N|V]) :- edgeEvery(N,V), complete(V).
+
+edgeEvery(_, []).
+edgeEvery(N, [Q|T]) :- edge(N,Q), edgeEvery(N,T).
+
+%%% Findall
+%%% findall(Object, Condition, List)
+%%% Creates List of all of Objects that satisfy the Condition
+
+% List all vertices that have been defined:
+
+% ?- findall(X, edge(X, _), Verts).
+
+vertices(VertsSorted) :-
+    findall(X, edge(X, _), Verts),
+    sort(Verts, VertsSorted). % Note: sort removes duplicate items
+
+% List all edges connected to a given vertex:
+edgesBad(V, Edges) :-
+    findall(X, edge(V, X), Edges).
+
+% findall is a bit weird in that it won't tell you individual unifications
+% for the first two arguments:
+
+% ?- edgesBad(X, E).
+
+% bagof is similar, except will give you separate unifications for arguments
+edges(V, Edges) :-
+    bagof(X, edge(V,X), Edges).
+
+% Practice:
+% Degree of a vertex: number of edges connected to that vertex.
+degree(V, D) :-
+    edges(V, Edges),
+    length(Edges, D).
+
+degreeList(Nodes, Degrees) :- maplist(degree, Nodes, Degrees).
+
+% A subgraph of a graph is a subset of the vertices in the graph and any
+% edges that connect those vertices. Let's define subset/2, which tells whether
+% second argument is a subset of the first.
+
+% If empty, the only subset is the empty list
+subset([], []).
+% We can either not include the first element...
+subset([_|T], S) :- subset(T, S).
+% Or include the first element
+subset([H|T], [H|S]) :- subset(T, S).
+
+% Practice:
+% How would we get a list of all subsets of a list?
+allSubsets(List, SubsetsList) :-
+    findall(S, subset(List, S), SubsetsList).
+
+numberEdges(Edge) :- findall(X, edge(X, _), List),length(List, DoubleEdge), Edge is DoubleEdge / 2.
+
+allNodes(Nodes) :- findall(X, edge(X, _), List), sort(List, Nodes).
+
+sumDegree(Sum) :- allNodes(Nodes), degreeList(Nodes, Degrees), sum_list(Degrees, Sum).
+
+
+isPath(X, Y) :- path(X,Y, _).
+
+nodeIsConnected(_, []).
+nodeIsConnected(Node, [H|T]) :- isPath(Node, H), nodeIsConnected(Node, T).
+
+connected([]).
+connected([H|T]) :- nodeIsConnected(H, T), connected(T).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lab Problems
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% 1. Modify our path and pathNoRepeats predicates to add an extra variable
+%    that returns the node-by-node path from the first node to the last.
+%    Ex:
+%%   ?- path(a, e, P).
+%%   P = [a, b, e] ;
+%%   P = [a, c, d, b, e] ;
+%%   P = [a, c, b, e] ;
+
+% 2. Write a query, using maplist, that returns a list of the degrees
+%    of the nodes in the list [a, b, c, d, e].
+
+% 3. It is a known fact that in any graph, two times the number of edges
+%    is equal to the sum of the degrees of the nodes in the graph.
+%    Write two predicates that show this is true for our example graph.
+%    numberEdges/1 should return the number of edges that have been defined.
+%    sumDegree/1 should return the sum of the degrees of the nodes.
+%    You'll want to use some of the predicates we defined above, as well
+%    as maplist, findall, and sum_list/2 (which takes a list of numbers and
+%    a sum, and is true if the list adds up to the sum).
+
+% 4. A list of vertices is a connected graph if there is a path from every
+%    vertex to every other vertex. Note that this is different from complete.
+%    Write a rule connected/1 that is true if the list of nodes is a connected
+%    graph..

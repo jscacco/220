@@ -1,0 +1,48 @@
+include Comparable 
+require Date
+
+class Book 
+  attr_reader :title, :author, :status
+  
+  def initialize(title, author)
+    @title = title
+    @author = author
+    @status = :available
+  end
+
+  def check_out
+    today = Date.now
+    @status = today if @status == :available
+    @status += 14   
+  end
+
+  def check_in
+    @status = :available
+  end
+
+  def availability
+    puts "Available" if @status== :available
+    puts "Due back " +@status.strftime('%a %d %b %Y') + "."
+  end
+
+  def to_s
+    puts @title + " by " + @author
+  end
+
+  def <=> other
+    if @author < other.author
+      return -1
+    elsif @author > other.author
+      return 1
+    elsif @author == other.author
+      if @title < other.title
+        return -1
+      elsif @title > other.title
+        return 1
+      elsif @title == other.title
+        return 0
+      end
+    end
+  end
+    
+end
